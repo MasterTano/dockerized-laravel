@@ -1,0 +1,60 @@
+version: "3"
+
+networks:
+  laravel:
+
+volumes:
+  mysql-data:
+
+services:
+  php:
+    build: .
+    container_name: php
+    ports:
+      - "9000:9000"
+    volumes:
+      # NOTE: same volume (for application code) should be mount in php service & nginx service
+      # NOTE: This will give you headache if you didnt take this in mind ^_^
+      - ./src:/var/www/html
+    environment:
+      SERVICE_NAME: php
+      SERVICE_TAGS: dev
+    restart: unless-stopped
+    tty: true
+    networks:
+      - laravel
+
+  mysql:
+    image: mysql:5.7
+    container_name: mysql
+    ports:
+      # I already have a host mysql listening on 3306
+      # So I need to use another port
+      - "3305:3306"
+    environment:
+      MYSQL_DATABASE: homestead
+      MYSQL_USER: homestead
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - "mysql-data:/var/lib/mysql"
+    restart: unless-stopped
+    tty: true
+    networks:
+      - laravel
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx
+    depends_on:
+      - php
+      - mysql
+    ports:
+      - "8080:80"
+    volumes:
+      - "./src:/var/www/html"
+      - "./nginx/default.conf:/etc/nginx/conf.d/default.conf"
+    restart: unless-stopped
+    tty: true
+    networks:
+      - laravel
